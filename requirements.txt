@@ -1,10 +1,10 @@
 streamlit==1.44.1
 pandas==2.2.3
-numpy==2.2.4
+numpy==1.26.4
 pyarrow==19.0.1
-geopandas==1.0.1
-shapely==2.1.0
-fiona==1.10.1
+geopandas==0.14.4
+shapely==2.0.7
+fiona==1.9.6
 plotly==6.0.1
 altair==5.5.0
 matplotlib==3.10.1
