@@ -13,11 +13,8 @@ from src.base.constants import (
     MODEL_LABELS,
     FEATURE_LABELS,
 )
-from src.modeling.forecast_views import (
-    add_prediction_interval_from_oos_error,
-    plot_forecast_ranked,
-)
-from src.modeling.diagnostics import (
+from src.runtime.forecast_views import plot_forecast_ranked
+from src.runtime.model_diagnostics import (
     plot_predicted_vs_real,
     plot_error_distribution,
     build_error_map_frame,
@@ -124,21 +121,9 @@ def render_tab_modelo() -> None:
         st.error("No fue posible generar el resumen de modelos.")
         return
 
-    linear_2027_df = add_prediction_interval_from_oos_error(
-        linear_2027_df,
-        predictions_df,
-        model_name="linear_regression",
-    )
-
-    ridge_2027_df = add_prediction_interval_from_oos_error(
-        ridge_2027_df,
-        predictions_df,
-        model_name="ridge",
-    )
-
     st.markdown(
         """
-        En esta sección encontrarás la comparación de tres modelos predictivos para estimar la proporción de participación municipal en la siguiente elección:
+        En esta sección encontrarás la comparación entre un estimador ingenuo y dos modelos predictivos para estimar la proporción de participación municipal en la siguiente elección:
         un estimador ingenuo, una regresión lineal y un modelo Ridge. Los modelos se entrenan con información histórica del
         propio municipio y del contexto estatal, usando como regresores la proporción de participación en elecciones anteriores
         y la proporción media de participación del estado.

@@ -1,13 +1,9 @@
 """
 pipeline.py
-# ARCHIVO DE PIPELINE OFFLINE PARA EL PROYECTO DE ANÁLISIS DE DATOS ELECTORALES:
-# Este módulo se encarga de orquestar el proceso completo de carga, limpieza, optimización y transformación de los datos. 
-# Incluye funciones para:
-# - Cargar y procesar todo el conjunto de datos para los años seleccionados
-# - Cargar y procesar un año específico para todos los estados o un subconjunto de estados
-# - Cargar y procesar todas las elecciones de un estado específico para los años seleccionados
-# - Alias explícito para carga multianual o series temporales
-# Cada función devuelve un DataFrame listo para análisis y visualización, con las optimizaciones y transformaciones aplicadas.
+Archivo de pipeline offline para el proyecto de análisis de datos electorales.
+
+Este módulo se encarga de orquestar el proceso completo de carga,
+limpieza, optimización y transformación de los datos.
 """
 
 #------------------------------------
@@ -20,13 +16,13 @@ from typing import Iterable
 
 import pandas as pd
 
-from src.base.data_loader import (
+from src.offline.base.data_loader import (
     load_data,
     load_state_data,
     load_year_data,
 )
-from src.base.data_cleaning import optimize_types
-from src.base.transformations import standardize_dimensions
+from src.offline.base.data_cleaning import optimize_types
+from src.offline.base.transformations import standardize_dimensions
 
 #--------------------------------------------------------------------
 # DEF prepare_dataframe(): PREPARA EL DATAFRAME APLICANDO OPTIMIZACIÓN DE TIPOS Y ESTANDARIZACIÓN DE DIMENSIONES DERIVADAS
@@ -58,8 +54,8 @@ def load_processed_data(
     Devuelve:
             - Un DataFrame con todos los datos concatenados, optimizados y con dimensiones derivadas estandarizadas, listo para análisis y visualización    
     """
-    df_raw = load_data(base_dir=base_dir, years=years) #CARGA LOS DATOS SIN PROCESAR
-    return prepare_dataframe(df_raw) #APLICA def prepare_dataframe()
+    df_raw = load_data(base_dir=base_dir, years=years) 
+    return prepare_dataframe(df_raw)
 
 #--------------------------------------------------------------------
 # DEF load_processed_year(): CARGA UN AÑO ESPECÍFICO PARA UNO, ALGUNO O TODOS LOS ESTADOS Y DEVUELVE UN DATAFRAME PROCESADO

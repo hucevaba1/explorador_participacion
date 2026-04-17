@@ -15,7 +15,7 @@ from src.base.constants import (
     STATE_CODE_FROM_LABEL,
     TIME_SERIES_PALETTE,
 )
-from src.views import build_state_year_charts_altair
+from src.runtime.charts_altair import build_state_year_charts_altair
 from app.ui_helpers import (
     render_centered_legend,
     render_time_series_metrics,

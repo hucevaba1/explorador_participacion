@@ -47,13 +47,6 @@ data/geometrias_municipios/
 # =========================
 # DATOS PROCESADOS PESADOS (NO SUBIR)
 # =========================
-data/processed/2009/
-data/processed/2012/
-data/processed/2015/
-data/processed/2018/
-data/processed/2021/
-data/processed/2024/
-data/processed/geometrias_municipios/
 data/processed/app/municipios_geometry.parquet
 
 # =========================

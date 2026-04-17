@@ -1,6 +1,7 @@
 """
 pipeline.py
-ARCHIVO PRINCIPAL DEL FLUJO DE MODELADO Y EVALUACIÓN DE MODELOS DE REGRESIÓN PARA PRONÓSTICO DE SV RATIO DEL ANAÁLSIS ELECTORAL
+Archivo principal del flujo offline de modelado y evaluación
+de modelos de regresión para pronóstico de sv_ratio electoral.
 """
 #=====================================
 # IMPORTACIONES
@@ -9,14 +10,14 @@ from __future__ import annotations
 from pathlib import Path
 import pandas as pd
 
-from src.base.pipeline import load_processed_multi_year
+from src.offline.base.pipeline import load_processed_multi_year
 from src.base.constants import MODELING_YEARS, MODEL_TARGET_COL
-from src.modeling.feature_engineering import build_modeling_dataframe
-from src.modeling.baseline import baseline_naive_last_value
-from src.modeling.validation import get_fixed_time_folds
-from src.modeling.evaluation import evaluate_predictions
-from src.modeling.diagnostics import build_prediction_frame
-from src.modeling.modelos import (
+from src.offline.modeling.feature_engineering import build_modeling_dataframe
+from src.offline.modeling.baseline import baseline_naive_last_value
+from src.offline.modeling.validation import get_fixed_time_folds
+from src.offline.modeling.evaluation import evaluate_predictions
+from src.offline.model_output_frames import build_prediction_frame
+from src.offline.modeling.modelos import (
     train_linear,
     train_ridge,
     predict,
@@ -97,7 +98,7 @@ def run_model_diagnostics(
 
     folds = get_fixed_time_folds()
 
-    results: list[dict] = []
+    results: list[dict[str, int | float | str]] = []
     prediction_frames: list[pd.DataFrame] = []
 
     for fold in folds:

@@ -1,12 +1,6 @@
 """
-diagnostics.py
-ARCHIVO DE DIAGNÓSTICO PARA EL PROYECTO DE ANÁLISIS DE DATOS ELECTORALES:
-Este módulo se encarga de construir los marcos de datos y visualizaciones necesarias para el diagnóstico de los modelos de predicción. Incluye funciones para:
-- Estandarizar el output de predicción para diagnóstico, asegurando que tenga las columnas necesarias para análisis posteriores
-- Generar scatter plots de predicho vs real para evaluar visualmente el desempeño del modelo
-- Generar histogramas de errores para analizar la distribución de los errores de predicción
-- Preparar un GeoDataFrame para mapear los errores de predicción a nivel municipal
-- Construir mapas coropléticos interactivos del error municipal usando Plotly
+model_diagnostics.py
+Funciones de diagnóstico visual para la capa runtime de la app.
 """
 
 # ==================================
@@ -24,55 +18,9 @@ import plotly.express as px
 
 from src.base.validator import validate_required_columns
 
-# ==================================
-# DEF build_prediction_frame(): ESTANDARIZA EL OUTPUT DE PREDICCIÓN PARA DIAGNÓSTICO
-# ==================================  
-def build_prediction_frame(
-    pred_df: pd.DataFrame,
-    model_name: str,
-    target_col: str,
-    test_year: int,
-) -> pd.DataFrame:
-    """
-    Estandariza el output de predicción para diagnóstico. 
-        Recibe:
-            - pred_df: DataFrame con al menos columnas "y_pred" y target_col (real).
-            - model_name: Nombre del modelo (string).
-            - target_col: Nombre de la columna con los valores reales (string).
-            - test_year: Año de prueba (int).
-        Devuelve:
-            - DataFrame con columnas estandarizadas para diagnóstico:
-                "model", "test_year", "CVEGEO", "municipio", "state_code", "year", "y_true", "y_pred", "error", "abs_error"  
-    """
-    work = pred_df.copy()
-
-    required_cols = ["CVEGEO", "municipio", "state_code", "year", "y_pred"]
-    validate_required_columns(work, required_cols, context="diagnostics")
-
-    if "y_true" not in work.columns:
-        if target_col not in work.columns:
-            raise ValueError(
-                f"pred_df debe contener 'y_true' o la columna target {target_col!r}."
-            )
-        work["y_true"] = work[target_col]
-
-    work["error"] = work["y_pred"] - work["y_true"]
-    work["abs_error"] = work["error"].abs()
-
-    cols = ["CVEGEO", "municipio", "state_code", "year",
-            "y_true", "y_pred", "error", "abs_error",]
-
-    out = work[cols].copy()
-    out["model"] = model_name
-    out["test_year"] = test_year
-
-    ordered_cols = ["model", "test_year", "CVEGEO", "municipio", "state_code",
-                    "year", "y_true", "y_pred", "error", "abs_error",]
-
-    return out[ordered_cols]
 
 # ==================================
-# DEF plot_predicted_vs_real(): SCATTER PLOT DE PREDICHO VS REAL PARA DIAGNÓSTICO DE MODELO   
+# DEF plot_predicted_vs_real()
 # ==================================
 def plot_predicted_vs_real(
     predictions_df: pd.DataFrame,
@@ -82,13 +30,6 @@ def plot_predicted_vs_real(
 ) -> tuple[plt.Figure, plt.Axes]:
     """
     Genera scatter plot de predicho vs real.
-        Recibe:
-            - predictions_df: DataFrame con las predicciones.
-            - model_name: Nombre del modelo.
-            - test_year: Año de prueba.
-            - figsize: Tamaño de la figura.
-        Devuelve: 
-            - fig, ax: Figura y ejes del plot como tupla.
     """
     required_cols = ["model", "y_true", "y_pred"]
     validate_required_columns(predictions_df, required_cols, context="diagnostics")
@@ -130,9 +71,10 @@ def plot_predicted_vs_real(
     fig.tight_layout()
     return fig, ax
 
-# ================================== 
-# DEF plot_error_distribution(): HISTOGRAMA DE ERRORES PARA DIAGNÓSTICO DE MODELO
-# ==================================    
+
+# ==================================
+# DEF plot_error_distribution()
+# ==================================
 def plot_error_distribution(
     predictions_df: pd.DataFrame,
     model_name: str,
@@ -142,14 +84,6 @@ def plot_error_distribution(
 ) -> tuple[plt.Figure, plt.Axes]:
     """
     Histograma de errores: y_pred - y_true.
-        Recibe:
-            - predictions_df: DataFrame con las predicciones.
-            - model_name: Nombre del modelo.
-            - test_year: Año de prueba.
-            - bins: Número de bins para el histograma (40 por defecto).
-            - figsize: Tamaño de la figura.
-        Devuelve:
-            - fig, ax: Figura y ejes del plot.
     """
     required_cols = ["model", "error"]
     validate_required_columns(predictions_df, required_cols, context="diagnostics")
@@ -180,8 +114,9 @@ def plot_error_distribution(
     fig.tight_layout()
     return fig, ax
 
-# ================================== 
-# DEF build_error_map_frame(): UNE PREDICCIONES CON GEOMETRÍAS PARA MAPEAR EL ERROR MUNICIPAL
+
+# ==================================
+# DEF build_error_map_frame()
 # ==================================
 def build_error_map_frame(
     predictions_df: pd.DataFrame,
@@ -190,18 +125,20 @@ def build_error_map_frame(
     test_year: int,
 ) -> gpd.GeoDataFrame:
     """
-    Une predicciones con geometrías para mapear el error municipal
-        Recibe:
-            - predictions_df: DataFrame con las predicciones.
-            - gdf_municipios: GeoDataFrame con las geometrías municipales y columna CVEGEO.
-            - model_name: Nombre del modelo.
-            - test_year: Año de prueba.
-        Devuelve:
-            - GeoDataFrame con geometrías municipales y columnas de predicción/error para diagnóstico espacial.
+    Une predicciones con geometrías para mapear el error municipal.
     """
-    required_cols = ["model", "test_year", "CVEGEO", "municipio", "y_true", "y_pred", "error", "abs_error"]
+    required_cols = [
+        "model",
+        "test_year",
+        "CVEGEO",
+        "municipio",
+        "y_true",
+        "y_pred",
+        "error",
+        "abs_error",
+    ]
     validate_required_columns(
-        predictions_df, 
+        predictions_df,
         required_cols,
         context="diagnostics",
     )
@@ -234,9 +171,10 @@ def build_error_map_frame(
 
     return merged
 
+
 # ==================================
-# DEF build_error_choropleth_plotly(): MAPA COROPLÉTICO INTERACTIVO DEL ERROR MUNICIPAL
-# ==================================    
+# DEF build_error_choropleth_plotly()
+# ==================================
 def build_error_choropleth_plotly(
     gdf_error: gpd.GeoDataFrame,
     color_col: str = "error",
@@ -246,14 +184,6 @@ def build_error_choropleth_plotly(
 ):
     """
     Genera un mapa coroplético interactivo del error municipal usando Plotly.
-        Recibe:
-            - gdf_error: GeoDataFrame con geometrías municipales y columnas de error/predicción.
-            - color_col: Columna a usar para colorear el mapa ("error" o "abs_error").
-            - title: Título del mapa (opcional).
-            - width: Ancho del mapa en píxeles.
-            - height: Alto del mapa en píxeles.
-        Devuelve:
-            - fig: Figura de Plotly con el mapa coroplético del error municipal.
     """
     valid_cols = {"error", "abs_error"}
 

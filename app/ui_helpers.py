@@ -12,6 +12,55 @@ import streamlit as st
 import pandas as pd 
 
 # -------------------------------------------------
+# FUNCIÖN PARA FILTRO DE TAB_ESTADOS
+# -------------------------------------------------
+def limit_categories(
+    view: pd.DataFrame,
+    top_n: int | None,
+    by: str = "SV",
+    others: bool = True,
+) -> pd.DataFrame:
+    """
+    Limita el número de categorías del view y, opcionalmente,
+    agrega una fila 'Otros' con la suma del resto.
+    """
+    if top_n is None or top_n <= 0:
+        return view
+
+    if by not in view.columns:
+        raise ValueError(f"Columna inválida para ordenar: {by}")
+
+    ordered = view.sort_values(by, ascending=False)
+
+    top = ordered.head(top_n)
+    remainder = ordered.iloc[top_n:]
+
+    if remainder.empty or not others:
+        return top
+
+    sv_sum = remainder["SV"].sum()
+    nv_sum = remainder["NV"].sum()
+    ns_sum = remainder["NS"].sum()
+    ln_sum = remainder["LN"].sum()
+    total_marked_sum = remainder["total_marked"].sum()
+
+    others_row = {
+        "categoria": "Otros",
+        "SV": sv_sum,
+        "NV": nv_sum,
+        "NS": ns_sum,
+        "LN": ln_sum,
+        "total_marked": total_marked_sum,
+        "sv_ratio": sv_sum / ln_sum if ln_sum > 0 else 0,
+        "nv_ratio": nv_sum / ln_sum if ln_sum > 0 else 0,
+        "ns_ratio": ns_sum / ln_sum if ln_sum > 0 else 0,
+    }
+
+    others_df = pd.DataFrame([others_row])
+
+    return pd.concat([top, others_df], ignore_index=True)
+
+# -------------------------------------------------
 # HELPERS MÉTRICAS
 # -------------------------------------------------
 def compute_weighted_metrics(df: pd.DataFrame) -> tuple[float, float]:

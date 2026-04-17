@@ -16,11 +16,9 @@ from src.base.constants import (
     GROUPING_TITLES,
     AVAILABLE_YEARS,
 )
-from src.views import (
-    limit_categories,
-    build_participation_chart_altair,
-)
-from src.maps.maps import build_state_choropleth_plotly
+from src.runtime.charts_altair import build_participation_chart_altair
+from app.ui_helpers import limit_categories
+from src.runtime.maps_render import build_state_choropleth_plotly
 from app.data_access import (
     get_tab_estado_artifact_cached,
     get_municipal_geometries_cached,

@@ -11,7 +11,7 @@ import geopandas as gpd
 import pandas as pd
 import streamlit as st
 
-from src.base.materialization import (
+from src.base.artifact_loader import (
     load_dataframe_artifact,
     load_geodataframe_artifact,
 )

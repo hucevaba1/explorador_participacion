@@ -1,30 +1,28 @@
 """
 charts_altair.py
-ARCHIVO ENCARGADO DE LOS GRÁFICOS CON ALTÁIR
+Funciones de gráficos Altair para la capa runtime de la app.
 """
 
-#============================
+# ============================
 # IMPORTACIONES
-#============================
+# ============================
 from __future__ import annotations
+
 import altair as alt
 import pandas as pd
+
 from src.base.constants import STATE_LABELS
 
+
 # =====================================================
-# DEF build_participation_chart_altair(): DEVUELVE UN GRÁFICO DE ALTAR A PARTIR DEL VIEW PARA LA PESTAÑA POR ESTADO
-# ===================================================== 
+# DEF build_participation_chart_altair()
+# =====================================================
 def build_participation_chart_altair(
     view: pd.DataFrame,
     title: str | None = None,
 ) -> alt.Chart:
     """
-    Devuelve un gráfico de Altair a partir del view.
-        Recibe:
-            - view: DataFrame con el view model para la pestaña Por estado, con las columnas necesarias para construir el gráfico
-            - title: título del gráfico (por defecto None, se construye automáticamente a partir de la información del view)
-        Devuelve:
-            - chart: gráfico de Altair construido a partir del view 
+    Devuelve un gráfico de Altair a partir del view para la pestaña Por estado.
     """
     sv_total_all = int(view["SV"].sum()) if "SV" in view.columns else 0
     nv_total_all = int(view["NV"].sum()) if "NV" in view.columns else 0
@@ -115,12 +113,15 @@ def build_participation_chart_altair(
                 alt.Tooltip("total_serie:Q", title="Total", format=","),
             ],
         )
+        .interactive()
+        .properties(height=420)
     )
 
-    return chart.interactive().properties(height=420)
+    return chart
+
 
 # =====================================================
-# DEF build_state_year_charts_altair(): DEVUELVE DOS CHARTS DE ALTAR PARA SERIES TEMPORALES POR GRUPO
+# DEF build_state_year_charts_altair()
 # =====================================================
 def build_state_year_charts_altair(
     state_year_view: pd.DataFrame,
@@ -131,15 +132,6 @@ def build_state_year_charts_altair(
 ) -> tuple[alt.Chart, alt.Chart]:
     """
     Devuelve dos charts de Altair para series temporales por grupo.
-    Recibe:
-        - state_year_view: DataFrame con el view model para series temporales por estado
-        - title_participacion: título para el gráfico de participación (por defecto "Participación por estado")
-        - title_abstencion: título para el gráfico de abstencionismo (por defecto "Abstencionismo por estado")
-        - color_domain: lista de códigos de estado para asignar colores específicos (por defecto None, se asignan colores automáticamente)
-        - color_range: lista de colores para asignar a los estados en el mismo orden que color_domain (por defecto None, se asignan colores automáticamente)
-    Devuelve:
-        - chart_participacion: gráfico de Altair para la participación por estado a lo largo del tiempo
-        - chart_abstencion: gráfico de Altair para el abstencionismo por estado a lo largo del tiempo
     """
     df = state_year_view.copy()
 
@@ -183,7 +175,8 @@ def build_state_year_charts_altair(
                 alt.Tooltip("SV:Q", title="Participación total", format=","),
             ],
         )
-        .interactive().properties(height=320)
+        .interactive()
+        .properties(height=320)
     )
 
     chart_abstencion = (
@@ -203,7 +196,8 @@ def build_state_year_charts_altair(
                 alt.Tooltip("NV:Q", title="Abstención total", format=","),
             ],
         )
-        .interactive().properties(height=320)
+        .interactive()
+        .properties(height=320)
     )
 
     return chart_participacion, chart_abstencion
