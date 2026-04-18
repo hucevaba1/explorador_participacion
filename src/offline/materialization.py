@@ -1,6 +1,6 @@
 """
 materialization.py
-Módulo para construir y guardar artefactos procesados
+Módulo offline para construir y guardar artefactos procesados
 listos para consumo por la aplicación.
 """
 
@@ -17,27 +17,61 @@ import pandas as pd
 from src.base.artifact_loader import ensure_processed_app_dir
 from src.base.config import PROJECT_ROOT, SHAPEFILE_PATH
 from src.base.constants import AVAILABLE_YEARS, STATE_LABELS
-
 from src.offline.base.aggregations import aggregate_group_year
-from src.offline.base.pipeline import (
-    load_processed_multi_year,
-    load_processed_year,
-)
-
+from src.offline.base.pipeline import load_processed_multi_year, load_processed_year
+from src.offline.forecast_intervals import add_prediction_interval_from_oos_error
 from src.offline.maps_build import (
-    load_municipal_geometries,
     build_municipal_metrics,
+    load_municipal_geometries,
 )
 from src.offline.modeling.pipeline import (
-    run_model_diagnostics,
     build_forecast_2027_outputs,
+    run_model_diagnostics,
 )
 from src.offline.view_models import (
-    get_view,
     get_group_year_view,
     get_state_year_view,
+    get_view,
 )
-from src.offline.forecast_intervals import add_prediction_interval_from_oos_error
+
+# ---------------------------------------
+# MAPEO DE CÓDIGOS ESTATALES NUMÉRICOS -> CANÓNICOS
+# ---------------------------------------
+STATE_CODE_FROM_CVE_ENT: dict[str, str] = {
+    "01": "ags",
+    "02": "bc",
+    "03": "bcs",
+    "04": "camp",
+    "05": "coah",
+    "06": "col",
+    "07": "chis",
+    "08": "chih",
+    "09": "cdmx",
+    "10": "dgo",
+    "11": "gto",
+    "12": "gro",
+    "13": "hgo",
+    "14": "jal",
+    "15": "mex",
+    "16": "mich",
+    "17": "mor",
+    "18": "nay",
+    "19": "nl",
+    "20": "oax",
+    "21": "pue",
+    "22": "qro",
+    "23": "qroo",
+    "24": "slp",
+    "25": "sin",
+    "26": "son",
+    "27": "tab",
+    "28": "tam",
+    "29": "tlax",
+    "30": "ver",
+    "31": "yuc",
+    "32": "zac",
+}
+
 
 # =====================================================
 # HELPERS DE RUTA / IO
@@ -68,27 +102,17 @@ def save_geodataframe_artifact(gdf: gpd.GeoDataFrame, filename: str) -> Path:
 
 
 # =====================================================
-# MATERIALIZACIÓN DE TABLAS PARA TAB_ESTADO
+# MATERIALIZACIÓN DE TABLAS PARA TAB_ESTADO / EXPLORADOR
 # =====================================================
 def build_tab_estado_artifacts(
     years: tuple[int, ...] = tuple(int(y) for y in AVAILABLE_YEARS),
 ) -> dict[str, pd.DataFrame]:
     """
-    Construye tablas agregadas listas para la pestaña Por estado.
-    Cada tabla queda agregada por año + estado + categoría.
+    Construye tablas agregadas listas para la exploración estatal.
+    En la versión actual de la app solo se materializa la vista por municipio.
     """
     artifacts: dict[str, list[pd.DataFrame]] = {
         "tab_estado_municipio.parquet": [],
-        "tab_estado_sexo.parquet": [],
-        "tab_estado_edad.parquet": [],
-        "tab_estado_tipo_seccion.parquet": [],
-    }
-
-    grouping_map = {
-        "tab_estado_municipio.parquet": "Mostrar por municipio",
-        "tab_estado_sexo.parquet": "Mostrar por sexo",
-        "tab_estado_edad.parquet": "Mostrar por edad",
-        "tab_estado_tipo_seccion.parquet": "Mostrar por tipo de sección",
     }
 
     for year in years:
@@ -98,11 +122,13 @@ def build_tab_estado_artifacts(
         for state_code in state_codes:
             df_state = df_year[df_year["state_code"] == state_code].copy()
 
-            for filename, grouping_label in grouping_map.items():
-                view = get_view(df_state, grouping_label=grouping_label).copy()
-                view["year"] = int(year)
-                view["state_code"] = state_code
-                artifacts[filename].append(view)
+            view = get_view(
+                df_state,
+                grouping_label="Mostrar por municipio",
+            ).copy()
+            view["year"] = int(year)
+            view["state_code"] = state_code
+            artifacts["tab_estado_municipio.parquet"].append(view)
 
     out: dict[str, pd.DataFrame] = {}
     for filename, parts in artifacts.items():
@@ -115,7 +141,7 @@ def save_tab_estado_artifacts(
     years: tuple[int, ...] = tuple(int(y) for y in AVAILABLE_YEARS),
 ) -> list[Path]:
     """
-    Construye y guarda artefactos de la pestaña Por estado.
+    Construye y guarda artefactos agregados por estado.
     """
     artifacts = build_tab_estado_artifacts(years=years)
     paths: list[Path] = []
@@ -127,14 +153,13 @@ def save_tab_estado_artifacts(
 
 
 # =====================================================
-# MATERIALIZACIÓN DE TABLA PARA MAPA DE TAB_ESTADO
+# MATERIALIZACIÓN DE TABLA PARA MAPA MUNICIPAL
 # =====================================================
 def build_tab_estado_mapa_artifact(
     years: tuple[int, ...] = tuple(int(y) for y in AVAILABLE_YEARS),
 ) -> pd.DataFrame:
     """
-    Construye la tabla agregada municipal lista para la pestaña de mapa
-    por año + estado + municipio.
+    Construye la tabla agregada municipal lista para mapas por año + estado + municipio.
     """
     parts: list[pd.DataFrame] = []
 
@@ -156,7 +181,7 @@ def save_tab_estado_mapa_artifact(
     years: tuple[int, ...] = tuple(int(y) for y in AVAILABLE_YEARS),
 ) -> Path:
     """
-    Construye y guarda el artefacto tabular del mapa de la pestaña Por estado.
+    Construye y guarda el artefacto tabular del mapa municipal.
     """
     df = build_tab_estado_mapa_artifact(years=years)
     return save_dataframe_artifact(df, "tab_estado_mapa.parquet")
@@ -209,13 +234,72 @@ def save_geometry_simplified_artifact(
 
 
 # =====================================================
-# MATERIALIZACIÓN DE TABLAS PARA TAB_AÑOS
+# MATERIALIZACIÓN DE GEOMETRÍA ESTATAL SIMPLIFICADA
+# =====================================================
+def build_state_geometry_simplified_artifact(
+    tolerance: float = 1000,
+) -> gpd.GeoDataFrame:
+    """
+    Construye un artefacto geoespacial simplificado a nivel estado
+    a partir de la geometría municipal base.
+
+    El flujo es:
+    - cargar geometría municipal desde la fuente geoespacial disponible,
+    - homogeneizar claves estatales,
+    - disolver por estado,
+    - simplificar de forma conservadora.
+    """
+    gdf = load_municipal_geometries(SHAPEFILE_PATH).copy()
+
+    if "CVE_ENT" not in gdf.columns:
+        raise ValueError("La geometría municipal no contiene la columna 'CVE_ENT'.")
+
+    gdf["CVE_ENT"] = gdf["CVE_ENT"].astype(str).str.zfill(2)
+    gdf["state_code"] = gdf["CVE_ENT"].map(STATE_CODE_FROM_CVE_ENT)
+
+    missing_codes = gdf[gdf["state_code"].isna()]["CVE_ENT"].drop_duplicates().tolist()
+    if missing_codes:
+        raise ValueError(
+            f"No se pudo mapear CVE_ENT a state_code para: {missing_codes}"
+        )
+
+    gdf["state_label"] = gdf["state_code"].map(STATE_LABELS).fillna(gdf["state_code"])
+
+    gdf_states = (
+        gdf[["state_code", "state_label", "geometry"]]
+        .dissolve(by=["state_code", "state_label"], as_index=False)
+        .copy()
+    )
+
+    gdf_states["geometry"] = gdf_states["geometry"].simplify(
+        tolerance=tolerance,
+        preserve_topology=True,
+    )
+
+    return gdf_states
+
+
+def save_state_geometry_simplified_artifact(
+    tolerance: float = 1000,
+) -> Path:
+    """
+    Guarda el artefacto geoespacial simplificado de estados.
+    """
+    gdf = build_state_geometry_simplified_artifact(tolerance=tolerance)
+    return save_geodataframe_artifact(
+        gdf,
+        "estados_geometry_simplified.parquet",
+    )
+
+
+# =====================================================
+# MATERIALIZACIÓN DE TABLAS PARA TAB_AÑOS / EXPLORADOR
 # =====================================================
 def build_tab_anios_artifacts(
     years: tuple[int, ...] = tuple(int(y) for y in AVAILABLE_YEARS),
 ) -> dict[str, pd.DataFrame]:
     """
-    Construye tablas agregadas listas para la pestaña Por años.
+    Construye tablas agregadas listas para series de tiempo nacionales.
     """
     df_all = load_processed_multi_year(PROJECT_ROOT, years=years)
 
@@ -237,7 +321,7 @@ def save_tab_anios_artifacts(
     years: tuple[int, ...] = tuple(int(y) for y in AVAILABLE_YEARS),
 ) -> list[Path]:
     """
-    Construye y guarda artefactos de la pestaña Por años.
+    Construye y guarda artefactos de series temporales nacionales.
     """
     artifacts = build_tab_anios_artifacts(years=years)
     paths: list[Path] = []
@@ -348,9 +432,7 @@ def build_modeling_artifacts() -> dict[str, pd.DataFrame]:
         "forecast_ridge_2027.parquet": forecast_ridge,
     }
 
-# =====================================================
-# GUARDANDO
-# =====================================================
+
 def save_modeling_artifacts() -> list[Path]:
     """
     Construye y guarda artefactos de modelado.
@@ -362,6 +444,7 @@ def save_modeling_artifacts() -> list[Path]:
         paths.append(save_dataframe_artifact(df, filename))
 
     return paths
+
 
 # =====================================================
 # MATERIALIZACIÓN TOTAL
@@ -376,8 +459,8 @@ def materialize_all_app_assets(
 
     paths.extend(save_tab_estado_artifacts(years=years))
     paths.append(save_tab_estado_mapa_artifact(years=years))
-    paths.append(save_geometry_artifact())
     paths.append(save_geometry_simplified_artifact())
+    paths.append(save_state_geometry_simplified_artifact())
     paths.extend(save_tab_anios_artifacts(years=years))
     paths.extend(save_tab_anios_state_dimension_artifacts(years=years))
     paths.extend(save_modeling_artifacts())

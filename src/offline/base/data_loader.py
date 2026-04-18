@@ -25,6 +25,16 @@ FILENAME_RE = re.compile(
     r"^datosabiertos_deceyec_conteoscensales(?P<year>\d{4})_(?P<state>[a-z]{2,5})\.csv$")
 
 # =====================================================
+# Normalizador de alias luego de ver problemas con geometrías 
+# ===================================================== 
+STATE_CODE_ALIASES = {
+    "tamps": "tam",
+    "tam": "tam",
+    "bcs": "bcs",
+    "bc": "bc",
+    "qroo": "qroo",
+}
+# =====================================================
 # DEF _year_dir(): VALIDA QUE EL DIRECTORIO DE AÑO EXISTA
 # =====================================================
 def _year_dir(base_dir: str | Path, year: int) -> Path:
@@ -49,6 +59,7 @@ def _read_electoral_csv(
 
     year = int(match.group("year"))
     state_code = match.group("state").lower()
+    state_code = STATE_CODE_ALIASES.get(state_code, state_code)
 
     df = pd.read_csv(fp, encoding=encoding, low_memory=False)
     df["year"] = year
@@ -101,20 +112,35 @@ def load_state_data(
 ) -> pd.DataFrame:
     """
     Carga los CSV de un estado específico para los años indicados.
+    Usa un código canónico de estado y resuelve alias al buscar archivos.
     """
     state_code = state_code.lower()
+    state_code = STATE_CODE_ALIASES.get(state_code, state_code)
+
     frames: list[pd.DataFrame] = []
 
     for year in years:
-        fp = (
-            _year_dir(base_dir, int(year))
-            / f"datosabiertos_deceyec_conteoscensales{int(year)}_{state_code}.csv"
-        )
+        year_dir = _year_dir(base_dir, int(year))
+        matched_fp: Path | None = None
 
-        if not fp.exists():
-            raise FileNotFoundError(f"No existe el archivo esperado: {fp}")
+        for fp in sorted(year_dir.glob("*.csv")):
+            match = FILENAME_RE.match(fp.name)
+            if not match:
+                continue
 
-        frames.append(_read_electoral_csv(fp, encoding=encoding))
+            file_state_code = match.group("state").lower()
+            file_state_code = STATE_CODE_ALIASES.get(file_state_code, file_state_code)
+
+            if file_state_code == state_code:
+                matched_fp = fp
+                break
+
+        if matched_fp is None:
+            raise FileNotFoundError(
+                f"No existe archivo para el estado canónico {state_code!r} en {year_dir}"
+            )
+
+        frames.append(_read_electoral_csv(matched_fp, encoding=encoding))
 
     return pd.concat(frames, ignore_index=True)
 
@@ -135,7 +161,9 @@ def load_year_data(
 
     wanted: set[str] | None = None
     if states is not None:
-        wanted = {state.lower() for state in states}
+        wanted = {
+            STATE_CODE_ALIASES.get(state.lower(), state.lower())for state in states
+            }
 
     frames: list[pd.DataFrame] = []
     loaded_states: set[str] = set()
@@ -152,6 +180,7 @@ def load_year_data(
             )
 
         state_code = match.group("state").lower()
+        state_code = STATE_CODE_ALIASES.get(state_code, state_code)
 
         if wanted is not None and state_code not in wanted:
             continue

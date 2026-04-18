@@ -36,3 +36,7 @@ def get_model_artifact_cached(filename: str) -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def get_municipal_geometries_cached() -> gpd.GeoDataFrame:
     return load_geodataframe_artifact("municipios_geometry_simplified.parquet")
+
+@st.cache_data(show_spinner=False)
+def get_state_geometries_cached() -> gpd.GeoDataFrame:
+    return load_geodataframe_artifact("estados_geometry_simplified.parquet")

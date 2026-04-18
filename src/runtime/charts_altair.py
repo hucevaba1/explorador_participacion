@@ -20,6 +20,7 @@ from src.base.constants import STATE_LABELS
 def build_participation_chart_altair(
     view: pd.DataFrame,
     title: str | None = None,
+    category_order: list[str] | None = None,
 ) -> alt.Chart:
     """
     Devuelve un gráfico de Altair a partir del view para la pestaña Por estado.
@@ -87,9 +88,9 @@ def build_participation_chart_altair(
         .encode(
             y=alt.Y(
                 "categoria:N",
-                sort=alt.SortField(field="SV", order="descending"),
+                sort=category_order if category_order is not None else alt.SortField(field="SV", order="descending"),
                 title=None,
-            ),
+                ),
             x=alt.X(
                 "pct:Q",
                 stack="zero",
@@ -129,19 +130,25 @@ def build_state_year_charts_altair(
     title_abstencion: str = "Abstencionismo por estado",
     color_domain: list[str] | None = None,
     color_range: list[str] | None = None,
+    series_code_col: str = "state_code",
+    series_label_col: str = "state_label",
+    series_title: str = "Serie",
 ) -> tuple[alt.Chart, alt.Chart]:
     """
     Devuelve dos charts de Altair para series temporales por grupo.
     """
     df = state_year_view.copy()
 
-    if "state_label" not in df.columns and "state_code" in df.columns:
-        df["state_label"] = df["state_code"].map(STATE_LABELS).fillna(
-            df["state_code"].astype(str)
-        )
+    if series_label_col not in df.columns and series_code_col in df.columns:
+        if series_code_col == "state_code":
+            df[series_label_col] = df[series_code_col].map(STATE_LABELS).fillna(
+                df[series_code_col].astype(str)
+            )
+        else:
+            df[series_label_col] = df[series_code_col].astype(str)
 
     color_enc = alt.Color(
-        "state_code:N",
+        f"{series_code_col}:N",
         title=None,
         legend=None,
         scale=alt.Scale(domain=color_domain, range=color_range)
@@ -152,10 +159,6 @@ def build_state_year_charts_altair(
     base = alt.Chart(df).encode(
         x=alt.X("year:O", title="Año"),
         color=color_enc,
-        tooltip=[
-            alt.Tooltip("state_label:N", title="Estado"),
-            alt.Tooltip("year:O", title="Año"),
-        ],
     )
 
     chart_participacion = (
@@ -169,10 +172,12 @@ def build_state_year_charts_altair(
                 axis=alt.Axis(format=".0%"),
             ),
             tooltip=[
-                alt.Tooltip("state_label:N", title="Estado"),
+                alt.Tooltip(f"{series_label_col}:N", title=series_title),
                 alt.Tooltip("year:O", title="Año"),
                 alt.Tooltip("sv_ratio:Q", title="% Participación", format=".2%"),
-                alt.Tooltip("SV:Q", title="Participación total", format=","),
+                alt.Tooltip("SV:Q", title="Participación nominal", format=","),
+                alt.Tooltip("nv_ratio:Q", title="% Abstención", format=".2%"),
+                alt.Tooltip("NV:Q", title="Abstención nominal", format=","),
             ],
         )
         .interactive()
@@ -190,10 +195,12 @@ def build_state_year_charts_altair(
                 axis=alt.Axis(format=".0%"),
             ),
             tooltip=[
-                alt.Tooltip("state_label:N", title="Estado"),
+                alt.Tooltip(f"{series_label_col}:N", title=series_title),
                 alt.Tooltip("year:O", title="Año"),
-                alt.Tooltip("nv_ratio:Q", title="% Abstencionismo", format=".2%"),
-                alt.Tooltip("NV:Q", title="Abstención total", format=","),
+                alt.Tooltip("sv_ratio:Q", title="% Participación", format=".2%"),
+                alt.Tooltip("SV:Q", title="Participación nominal", format=","),
+                alt.Tooltip("nv_ratio:Q", title="% Abstención", format=".2%"),
+                alt.Tooltip("NV:Q", title="Abstención nominal", format=","),
             ],
         )
         .interactive()

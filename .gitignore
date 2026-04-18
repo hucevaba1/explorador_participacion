@@ -62,3 +62,9 @@ data/processed/app/municipios_geometry.parquet
 src.backup/
 *.bak
 *.tmp
+
+# Artefactos no usados por la versión rediseñada
+data/processed/app/municipios_geometry.parquet
+data/processed/app/tab_estado_sexo.parquet
+data/processed/app/tab_estado_edad.parquet
+data/processed/app/tab_estado_tipo_seccion.parquet

@@ -17,6 +17,13 @@ import pandas as pd
 from src.offline.base.aggregations import aggregate_group
 from src.base.validator import validate_required_columns
 
+#===================================
+# CORRECCIÖN DE GEOMTRÏAS BJ
+#====================================
+MUNICIPAL_CODE_ALIASES: dict[tuple[str, str], str] = {
+    ("03", "004"): "009",  # Loreto
+    ("03", "005"): "008",  # Los Cabos
+}
 
 # -----------------------------------
 # DEF load_municipal_geometries(): CARGA EL SHAPEFILE DE GEOMETRÍAS MUNICIPALES Y CREA LA COLUMNA CVEGEO
@@ -59,6 +66,7 @@ def build_municipal_metrics(df: pd.DataFrame) -> pd.DataFrame:
 
     work["EDOCVE"] = work["EDOCVE"].astype("int64").astype(str).str.zfill(2)
     work["MPIOCVE"] = work["MPIOCVE"].astype("int64").astype(str).str.zfill(3)
+    work["MPIOCVE"] = [MUNICIPAL_CODE_ALIASES.get((edo, mpio), mpio) for edo, mpio in zip(work["EDOCVE"], work["MPIOCVE"])]
     work["CVEGEO"] = work["EDOCVE"] + work["MPIOCVE"]
 
     mun_names = (

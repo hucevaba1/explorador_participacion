@@ -41,7 +41,7 @@ STATE_LABELS: dict[str, str] = {
     "sin": "Sinaloa",
     "son": "Sonora",
     "tab": "Tabasco",
-    "tamps": "Tamaulipas",
+    "tam": "Tamaulipas",
     "tlax": "Tlaxcala",
     "ver": "Veracruz",
     "yuc": "Yucatán",
