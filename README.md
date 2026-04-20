@@ -1,3 +1,7 @@
+Autor: **Hugo Vargas**
+Contacto: **hu.ce.va.ba@gmail.com** | www.linkedin.com/in/hucevaba
+Github: **hucevaba1**
+
 # Explorador de participación electoral
 
 [Ver aplicación en Streamlit](https://exploradorparticipacion-hb.streamlit.app/)
@@ -76,6 +80,3 @@ python -m streamlit run streamlit_app.py
 - La aplicación consume artefactos **.parquet** previamente procesados para mejorar tiempos de carga.
 - Las geometrías fueron simplificadas para optimizar el render de mapas en producción.
 - Algunos municipios pueden aparecer **sin estimación en el modelo predictivo** cuando no existe suficiente información **histórica** comparable para generar el pronóstico.
-
-Autor: **Hugo Vargas**
-Github: hucevaba1
